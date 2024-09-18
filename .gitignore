@@ -1,0 +1,23 @@
+.config/rstudio/rstudio-prefs.json
+.local/share/rstudio/projects/none/console07/84FBAC4E
+# Ignorar a pasta .ssh e todo o seu conteúdo
+.ssh/
+
+# Configurações específicas do ambiente local
+.config/code-server/
+.gnupg/
+.local/share/rstudio/
+R/x86_64-pc-linux-gnu-library/
+.Rprofile
+.gitconfig
+.sh_history
+
+# Arquivos de leitura e outras documentações que não são necessários
+readme-code-server.txt
+readme-jupyter.txt
+readme-proxy.txt
+
+# Ignorar arquivos temporários ou específicos de sessão
+*.tmp
+*.swp
+*.DS_Store
