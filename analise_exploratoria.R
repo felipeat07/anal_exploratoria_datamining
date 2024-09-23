@@ -56,17 +56,10 @@ plot(grf)
 
 
 
-# Fala pessoal, estou com dificuldades de criar esse grafico abaixo de dispersao, quando ploto ele aprece muitos
-# poucos pontos no grafico, queria usar ele para tentar achar algum padrao de aumento de depression_score a medida que diminua
-# a atividade fisica e qualidade de sono, sabe? Tambem nao sei se eh o grafico adequado para isso!!
 
-
-# Usar as variáveis numéricas
-grf <- plot_scatter(dados |> select(x = Stress_Level, value = Sleep_Quality, variable = Depression_Score), 
-                    colors=colors[1:3]) + font
-plot(grf)
-
-
-
+#Achar correlacao entre essas variaveis numericas Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load
+numeric_var_filtred <- numeric_vars %>%
+  select(Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load)
+print(numeric_var_filtred)
 
 
