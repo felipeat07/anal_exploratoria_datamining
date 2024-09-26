@@ -1,7 +1,9 @@
 library("daltoolbox")
+#load_library("daltoolbox")
 library("ggplot2")
 library("RColorBrewer")
 library("dplyr")
+library("gridExtra")
 
 colors <- brewer.pal(9, 'Set1')
 # setting the font size for all charts
@@ -51,14 +53,18 @@ data <- dados |> group_by(Depression_Score, Gender ) |> summarize(Count = n())
 grf <- plot_groupedbar(data, colors=colors[1:2]) + font
 plot(grf)
 
-# Visualização de distribuições das variáveis numéricas // Distribuições ??? (Na verdade está mostrando só as colunas com variáveis numericas)
-numeric_vars <- dados %>% select_if(is.numeric)
-print(numeric_vars)
+# Filtrar as colunas numéricas
+numeric_vars <- dados %>% 
+  select(Age, CGPA, Semester_Credit_Load)
 
+# Criar três boxplots separados
+grf_age <- plot_boxplot(numeric_vars %>% select(Age), colors="white") + font 
+grf_cgpa <- plot_boxplot(numeric_vars %>% select(CGPA), colors="white") + font 
+grf_credit_load <- plot_boxplot(numeric_vars %>% select(Semester_Credit_Load), colors="white") + font
 
-#plotando box_plot da variaveis numericas // Não me diz nada
-grf <- plot_boxplot(numeric_vars, colors="white") + font
-plot(grf)
+# Organizar os três gráficos lado a lado ou empilhados
+grid.arrange(grf_age, grf_cgpa, grf_credit_load, nrow = 1)  # Lado a lado
+# Ou use nrow = 3 para empilhar verticalmente
 
 # Filtrar apenas as colunas "Course" e "CGPA"
 dados_course_cgpa <- dados %>%
@@ -69,20 +75,15 @@ grf <- plot_bar(dados_course_cgpa, label_x = "Course", label_y = "CGPA", colors=
 plot(grf)
 
 
-# Calcular média do Depression_Score por Course, Sleep_Quality e Physical_Activity // Não consegui retirar muita informação dessa análise
-depression_analysis <- dados %>%
-  group_by(Course, Sleep_Quality, Physical_Activity) %>%
-  summarise(Média_Depression_Score = mean(Depression_Score, na.rm = TRUE), .groups = 'drop')
-print(depression_analysis)
+# Calcular a média de Depression_Score por Course
+dados_depr_corse <- dados %>%
+  group_by(Course) %>%
+  summarise(Média_Depression_Score = mean(Depression_Score, na.rm = TRUE))
 
-
-#Filtrar colunas curso e media de depressao
-dados_depr_corse <- depression_analysis %>%
-  select(Course, Média_Depression_Score)
-
-# Aqui não fez sentido esse gráfico. Está fazendo o somatório agrupado por curso
-grf <- plot_bar(dados_depr_corse, label_x = "Course", label_y = "Média_Depression_Score", colors=colors[1]) + font
+# Gerar o gráfico de barras com as médias
+grf <- plot_bar(dados_depr_corse, label_x = "Course", label_y = "Média_Depression_Score", colors=colors[2]) + font
 plot(grf)
+
 
 
 #Achar correlacao entre essas variaveis numericas Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load
@@ -90,5 +91,7 @@ plot(grf)
 numeric_var_filtred <- numeric_vars %>%
   select(Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load)
 print(numeric_var_filtred)
+
+
 
 
