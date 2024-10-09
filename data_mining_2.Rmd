@@ -62,17 +62,6 @@ dados$CGPA[is.na(dados$CGPA)] <- mean(dados$CGPA, na.rm = TRUE) # CGPA preenchid
 dados$Substance_Use[is.na(dados$Substance_Use)] <- names(which.max(table(dados$Substance_Use))) # Substance_Use preenchido com a moda
 ```
 
-Encoding dos atributos categóricos
-Residence_Type
-```{r}
-cols = c("Course", "Gender", "Relationship_Status", "Residence_Type")
-for (col in cols) {
-  cm <- categ_mapping(col)
-  dados_cm <- transform(cm, dados)
-  dados <- cbind(dados, dados_cm)
-  dados[[col]] <- NULL
-}
-```
 
 Mapeamento dos valores da coluna 'Sleep_Quality'
 ```{r}
