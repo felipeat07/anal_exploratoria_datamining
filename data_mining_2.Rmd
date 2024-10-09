@@ -1,0 +1,55 @@
+```{r}
+library("daltoolbox")
+library("ggplot2")
+library("dplyr")
+library("tidyr")
+library("reshape")
+library("RColorBrewer")
+library("corrplot")
+library("WVPlots")
+library("GGally")
+library("aplpack")
+library("gridExtra")
+```
+
+Define fonte e esquema de cores para os gráficos
+```{r}
+colors <- brewer.pal(9, 'Set1')
+font <- theme(text = element_text(size=16))
+```
+
+Carregar o arquivo CSV
+Dados preenchidos com strings vazias são considerados NA
+```{r}
+dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
+```
+
+Visualizar as primeiras linhas
+```{r}
+head(dados)
+```
+Visualizar a estrutura dos dados
+```{r}
+str(dados)
+```
+
+Visualizar dados faltantes
+```{r}
+missing_data <- colSums(is.na(dados))
+missing_data <- missing_data[missing_data > 0]
+print(missing_data)
+```
+Preencher dados faltantes
+```{r}
+dados$CGPA[is.na(dados$CGPA)] <- mean(dados$CGPA, na.rm = TRUE) # CGPA preenchido com a média
+dados$Substance_Use[is.na(dados$Substance_Use)] <- names(which.max(table(dados$Substance_Use))) # Substance_Use preenchido com a moda
+```
+
+Encoding dos atributos categóricos
+```{r}
+dados[, !sapply(dados, is.numeric)]
+
+```
+
+
+
