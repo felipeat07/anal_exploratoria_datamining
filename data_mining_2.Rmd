@@ -1,15 +1,22 @@
 ```{r}
-library("daltoolbox")
-library("ggplot2")
-library("dplyr")
-library("tidyr")
-library("reshape")
-library("RColorBrewer")
-library("corrplot")
-library("WVPlots")
-library("GGally")
-library("aplpack")
-library("gridExtra")
+source("https://raw.githubusercontent.com/cefet-rj-dal/daltoolbox/main/jupyter.R")
+
+load_library("daltoolbox")
+load_library("ggplot2")
+load_library("dplyr")
+load_library("tidyr")
+load_library("reshape")
+load_library("RColorBrewer")
+load_library("corrplot")
+load_library("WVPlots")
+load_library("GGally")
+load_library("aplpack")
+load_library("gridExtra")
+
+library(ROSE)
+library(dplyr)
+library(rpart)
+library(caret)
 ```
 
 Define fonte e esquema de cores para os gráficos
@@ -51,5 +58,42 @@ dados[, !sapply(dados, is.numeric)]
 
 ```
 
+Remoção de outliers
 
+```{r}
+
+out_obj <- outliers()
+
+out_obj <- fit(out_obj, dados)
+
+dados_limpos <- transform(out_obj, dados)
+
+head(dados_limpos)
+
+nrow(dados_limpos)
+```
+ Criar a variável de classe com base no Depression_Score
+Vamos considerar "Alto" para scores maiores que 2 e "Baixo" para os menores ou iguais a 2
+```{r}
+dados$Class <- ifelse(dados$Depression_Score > 2, "Alto", "Baixo")
+
+table(dados$Class)
+```
+Realizar Undersampling
+```{r}
+minoria_count <- table(dados$Class)["Alto"]
+dados_balanced_us <- ovun.sample(Class ~ ., data = dados, method = "under", N = minoria_count)$data
+table(dados_balanced_us$Class)
+str(dados_balanced_us)
+
+```
+Realizar Oversampling
+
+```{r}
+n_maior <- table(dados$Class)["Baixo"]
+dados_balanced_os <- ovun.sample(Class ~ ., data = dados, method = "over", N = n_maior * 2)$data
+table(dados_balanced_os$Class)
+str(dados_balanced_os)
+
+```
 
