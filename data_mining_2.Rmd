@@ -1,6 +1,5 @@
 ```{r}
 source("https://raw.githubusercontent.com/cefet-rj-dal/daltoolbox/main/jupyter.R")
-
 load_library("daltoolbox")
 load_library("ggplot2")
 load_library("dplyr")
@@ -12,11 +11,6 @@ load_library("WVPlots")
 load_library("GGally")
 load_library("aplpack")
 load_library("gridExtra")
-
-library(ROSE)
-library(dplyr)
-library(rpart)
-library(caret)
 ```
 
 Define fonte e esquema de cores para os gráficos
@@ -31,10 +25,25 @@ Dados preenchidos com strings vazias são considerados NA
 dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
 ```
 
+```{r}
+dados <- dados %>%
+  mutate(Depression_Score = recode(Depression_Score, 
+                                    "0" = "Baixissimo",
+                                    "1" = "Muito Baixo", 
+                                    "2" = "Baixo", 
+                                    "3" = "Médio", 
+                                    "4" = "Alto", 
+                                    "5" = "Muito Alto"))
+
+dados$Depression_Score <- as.factor(dados$Depression_Score)
+```
+
+
 Visualizar as primeiras linhas
 ```{r}
 head(dados)
 ```
+
 Visualizar a estrutura dos dados
 ```{r}
 str(dados)
@@ -46,6 +55,7 @@ missing_data <- colSums(is.na(dados))
 missing_data <- missing_data[missing_data > 0]
 print(missing_data)
 ```
+
 Preencher dados faltantes
 ```{r}
 dados$CGPA[is.na(dados$CGPA)] <- mean(dados$CGPA, na.rm = TRUE) # CGPA preenchido com a média
@@ -53,47 +63,107 @@ dados$Substance_Use[is.na(dados$Substance_Use)] <- names(which.max(table(dados$S
 ```
 
 Encoding dos atributos categóricos
+Residence_Type
 ```{r}
-dados[, !sapply(dados, is.numeric)]
-
+cols = c("Course", "Gender", "Relationship_Status", "Residence_Type")
+for (col in cols) {
+  cm <- categ_mapping(col)
+  dados_cm <- transform(cm, dados)
+  dados <- cbind(dados, dados_cm)
+  dados[[col]] <- NULL
+}
 ```
 
-Remoção de outliers
+Mapeamento dos valores da coluna 'Sleep_Quality'
+```{r}
+dados <- dados %>%
+  mutate(Sleep_Quality = recode(Sleep_Quality, "Good" = "3", "Average" = "2", "Poor" = "1"))
+```
+
+Mapeamento dos valores da coluna "Diet_Quality"
+```{r}
+dados <- dados %>%
+  mutate(Diet_Quality = recode(Diet_Quality, "Good" = "3", "Average" = "2", "Poor" = "1"))
+```
+
+Mapeamento dos valores da coluna '"Physical_Activity"'
+```{r}
+dados <- dados %>%
+  mutate(Physical_Activity = recode(Physical_Activity, "High" = "3", "Moderate" = "2", "Low" = "1"))
+```
+
+Mapeamento dos valores da coluna "Extracurricular_Involvement"
+```{r}
+dados <- dados %>%
+  mutate(Extracurricular_Involvement = recode(Extracurricular_Involvement, "High" = "3", "Moderate" = "2", "Low" = "1"))
+```
+
+Mapeamento dos valores da coluna "Social_Support"
+```{r}
+dados <- dados %>%
+  mutate(Social_Support = recode(Social_Support, "High" = "3", "Moderate" = "2", "Low" = "1"))
+```
+
+Mapeamento dos valores da coluna "Substance_Use"
+```{r}
+dados <- dados %>%
+  mutate(Substance_Use = recode(Substance_Use, "Frequently" = "3", "Occasionally" = "2", "Never" = "1"))
+```
+
+Mapeamento dos valores da coluna "Counseling_Service_Use"
+```{r}
+dados <- dados %>%
+  mutate(Counseling_Service_Use = recode(Counseling_Service_Use, "Frequently" = "3", "Occasionally" = "2", "Never" = "1"))
+```
+
+Mapeamento dos valores da coluna "Family_History"
+```{r}
+dados <- dados %>%
+  mutate(Family_History  = recode(Family_History, "No" = "0", "Yes" = "1"))
+```
+
+Mapeamento dos valores da coluna "Chronic_Illness "
+```{r}
+dados <- dados %>%
+  mutate(Chronic_Illness   = recode(Chronic_Illness, "No" = "0", "Yes" = "1"))
+```
+
+
+Arvore de decisao
+```{r}
+#extracting the levels for the dataset
+slevels <- levels(dados$Depression_Score)
+slevels
+```
 
 ```{r}
-
-out_obj <- outliers()
-
-out_obj <- fit(out_obj, dados)
-
-dados_limpos <- transform(out_obj, dados)
-
-head(dados_limpos)
-
-nrow(dados_limpos)
+# preparing dataset for random sampling
+set.seed(1)
+sr <- sample_random()
+sr <- train_test(sr, dados)
+dados_train <- sr$train
+dados_test <- sr$test
 ```
- Criar a variável de classe com base no Depression_Score
-Vamos considerar "Alto" para scores maiores que 2 e "Baixo" para os menores ou iguais a 2
-```{r}
-dados$Class <- ifelse(dados$Depression_Score > 2, "Alto", "Baixo")
-
-table(dados$Class)
-```
-Realizar Undersampling
-```{r}
-minoria_count <- table(dados$Class)["Alto"]
-dados_balanced_us <- ovun.sample(Class ~ ., data = dados, method = "under", N = minoria_count)$data
-table(dados_balanced_us$Class)
-str(dados_balanced_us)
-
-```
-Realizar Oversampling
 
 ```{r}
-n_maior <- table(dados$Class)["Baixo"]
-dados_balanced_os <- ovun.sample(Class ~ ., data = dados, method = "over", N = n_maior * 2)$data
-table(dados_balanced_os$Class)
-str(dados_balanced_os)
-
+tbl <- rbind(table(dados[,"Depression_Score"]), 
+             table(dados_train[,"Depression_Score"]), 
+             table(dados_test[,"Depression_Score"]))
+rownames(tbl) <- c("dataset", "training", "test")
+head(tbl)
 ```
+
+# Aqui é a parte do treinamento do modelo que não está dando certo
+model <- cla_dtree("Depression_Score", slevels)
+model <- fit(model, dados_train)
+train_prediction <- predict(model, iris_train)
+
+
+
+
+
+
+
+
+
 
