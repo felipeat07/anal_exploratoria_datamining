@@ -11,6 +11,7 @@ load_library("WVPlots")
 load_library("GGally")
 load_library("aplpack")
 load_library("gridExtra")
+library(gt)
 ```
 
 Define fonte e esquema de cores para os gráficos
@@ -142,16 +143,44 @@ rownames(tbl) <- c("dataset", "training", "test")
 head(tbl)
 ```
 
-# Aqui é a parte do treinamento do modelo que não está dando certo
+Preparar o conjunto de dados para amostragem aleatória
+
+```{r}
+set.seed(1)
+sr <- sample_random()
+sr <- train_test(sr, dados)
+
+```
+
+
+Dividir os dados em conjuntos de treino e teste
+
+```{r}
+dados_train <- sr$train
+dados_test <- sr$test
+```
+
+Treinamento do modelo de árvore de decisão
+
+
+```{r}
 model <- cla_dtree("Depression_Score", slevels)
 model <- fit(model, dados_train)
-train_prediction <- predict(model, iris_train)
+```
 
 
+Previsão no conjunto de treino
 
+```{r}
+train_prediction <- predict(model, dados_train)
+```
 
+Avaliação do modelo no conjunto de treino
 
-
+```{r}
+dados_train_predictand <- adjust_class_label(dados_train[,"Depression_Score"])
+train_eval <- evaluate(model, dados_train_predictand, train_prediction)
+```
 
 
 
