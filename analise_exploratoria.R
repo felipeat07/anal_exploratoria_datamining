@@ -1,97 +1,101 @@
-library("daltoolbox")
-#load_library("daltoolbox")
-library("ggplot2")
-library("RColorBrewer")
-library("dplyr")
-library("gridExtra")
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(dplyr)
+library(ggplot2)
 
-colors <- brewer.pal(9, 'Set1')
-# setting the font size for all charts
-font <- theme(text = element_text(size=16))
-
-getmode <- function(v) {
-  uniqv <- unique(v)
-  uniqv[which.max(tabulate(match(v, uniqv)))]
-}
-
-# Carregar o arquivo CSV
+# Carregar o arquivo CSV (substitua pelo caminho correto do arquivo)
 dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
 
-# Visualizar as primeiras linhas
-head(dados)
+# Remover linhas com valores ausentes
+dados <- na.omit(dados)
 
-# Visualizar a estrutura dos dados
+# Transformar variáveis categóricas em fatores
+dados <- dados %>%
+  mutate_if(is.character, as.factor)
+
+# Verificar quais variáveis são numéricas e quais são categóricas
 str(dados)
 
-# Resumo das estatísticas descritivas para os dados numéricos
-summary(select_if(dados, is.numeric))
 
-# Visualizar dados faltantes
-missing_data <- colSums(is.na(dados))
-missing_data <- missing_data[missing_data > 0]
-print(missing_data)
+# Contagem de amostras em cada classe de Depression_Score
+table(dados$Depression_Score)
 
-# Tratamento dos dados faltantes // Não sei se é nesse momento que é para fazer
-# Preencher os CGPA com a média
-# dados$CGPA[is.na(dados$CGPA)] <- mean(dados$CGPA, na.rm = TRUE)
-# 
-# # Preencher o Substance_Use com a moda // Não tem função de moda no R \0/
-# dados$Substance_Use[is.na(dados$Substance_Use)] <- getmode(dados$Substance_Use)
+# Definir a classe minoritária
+minor_class_count <- min(table(dados$Depression_Score))
 
-# Esse gráfico mostra no eixo X o depression score e no eixo Y a média de idade (Não é possível identificar nada)
-data <- dados |> group_by(Depression_Score) |> summarize(Age=mean(Age))
-grf <- plot_bar(data, colors=colors[0:nrow(data)]) + font
-plot(grf)
+# Realizar undersampling para balancear as classes
+dados_balanceados <- dados %>%
+  group_by(Depression_Score) %>%
+  sample_n(minor_class_count) %>%
+  ungroup()
 
-# Esse gráfico mostra no eixo X o depression score e no eixo Y o Coeficiente de rendimento  (Não é possível identificar nada)
-data <- dados |> group_by(Depression_Score) |> summarize(CGPA=mean(CGPA))
-grf <- plot_bar(data, colors=colors[0:nrow(data)]) + font
-plot(grf)
+# Contagem das amostras após o balanceamento
+table(dados_balanceados$Depression_Score)
 
-# Esse gráfico mostra no eixo X o depression score e no eixo Y o   (Não é possível identificar nada)
-data <- dados |> group_by(Depression_Score, Gender ) |> summarize(Count = n())
-grf <- plot_groupedbar(data, colors=colors[1:2]) + font
-plot(grf)
+# Plotar o histograma antes do balanceamento
+ggplot(dados, aes(x = as.factor(Depression_Score), fill = as.factor(Depression_Score))) +
+  geom_bar() +
+  labs(title = "Distribuição das Classes de Depression_Score (Antes do Balanceamento)", 
+       x = "Depression Score", y = "Contagem") +
+  theme_minimal()
 
-# Filtrar as colunas numéricas
-numeric_vars <- dados %>% 
-  select(Age, CGPA, Semester_Credit_Load)
-
-# Criar três boxplots separados
-grf_age <- plot_boxplot(numeric_vars %>% select(Age), colors="white") + font 
-grf_cgpa <- plot_boxplot(numeric_vars %>% select(CGPA), colors="white") + font 
-grf_credit_load <- plot_boxplot(numeric_vars %>% select(Semester_Credit_Load), colors="white") + font
-
-# Organizar os três gráficos lado a lado ou empilhados
-grid.arrange(grf_age, grf_cgpa, grf_credit_load, nrow = 1)  # Lado a lado
-# Ou use nrow = 3 para empilhar verticalmente
-
-# Filtrar apenas as colunas "Course" e "CGPA"
-dados_course_cgpa <- dados %>%
-  select(Course, CGPA)
-
-# Grafico de barra do CGPA por curso // Não entendi o que é o eixo y desse gáfico // Agora acho que entendi, está com o somatório do CR dos estudantes por curso
-grf <- plot_bar(dados_course_cgpa, label_x = "Course", label_y = "CGPA", colors=colors[1]) + font
-plot(grf)
-
-
-# Calcular a média de Depression_Score por Course
-dados_depr_corse <- dados %>%
-  group_by(Course) %>%
-  summarise(Média_Depression_Score = mean(Depression_Score, na.rm = TRUE))
-
-# Gerar o gráfico de barras com as médias
-grf <- plot_bar(dados_depr_corse, label_x = "Course", label_y = "Média_Depression_Score", colors=colors[2]) + font
-plot(grf)
-
-
-
-#Achar correlacao entre essas variaveis numericas Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load
-# Não entendi esse resultado
-numeric_var_filtred <- numeric_vars %>%
-  select(Stress_Level, Depression_Score, Anxiety_Score, Financial_Stress, Semester_Credit_Load)
-print(numeric_var_filtred)
+# Plotar o histograma após o balanceamento
+ggplot(dados_balanceados, aes(x = as.factor(Depression_Score), fill = as.factor(Depression_Score))) +
+  geom_bar() +
+  labs(title = "Distribuição das Classes de Depression_Score (Após o Balanceamento)", 
+       x = "Depression Score", y = "Contagem") +
+  theme_minimal()
 
 
 
 
+
+
+
+
+
+
+library(ggplot2)
+library(dplyr)
+library(caret)
+library(reshape2)
+
+# Criar novas features com combinações diferentes
+dados <- dados %>%
+  mutate(
+    Stress_Anxiety = Stress_Level * Anxiety_Score,  # Multiplicação de estresse e ansiedade
+    Stress_Sleep = Stress_Level + as.numeric(Sleep_Quality),  # Soma do estresse e qualidade do sono
+    Physical_Support = as.numeric(Physical_Activity) + as.numeric(Social_Support),  # Soma de atividade física e suporte social
+    Diet_Quality_Support = as.numeric(Diet_Quality) * as.numeric(Social_Support),  # Multiplicação de qualidade da dieta e suporte social
+    CGPA_Depression = CGPA * (5 - as.numeric(Depression_Score))  # Produto do CGPA e inverso do escore de depressão
+  )
+
+# Normalizar as novas variáveis para que fiquem na mesma escala
+dados_normalizados <- dados %>%
+  mutate_at(vars(Stress_Anxiety, Stress_Sleep, Physical_Support, Diet_Quality_Support, CGPA_Depression), scale)
+
+# Verificar as primeiras linhas com as novas features normalizadas
+head(dados_normalizados)
+
+# Selecionar apenas as colunas relevantes para a correlação
+dados_selecionados <- dados_normalizados %>%
+  select(Depression_Score, Stress_Anxiety, Stress_Sleep, Physical_Support, Diet_Quality_Support, CGPA_Depression)
+
+# Transformar Depression_Score em numérico para calcular a correlação
+dados_selecionados$Depression_Score <- as.numeric(as.character(dados_selecionados$Depression_Score))
+
+# Calcular a correlação entre as novas variáveis e Depression_Score
+correlacoes <- cor(dados_selecionados, use = "complete.obs")
+
+# Exibir a matriz de correlação
+print(correlacoes)
+
+# Plotar um heatmap para visualizar a correlação
+cor_data <- melt(correlacoes)
+ggplot(cor_data, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = round(value, 2)), color = "white", size = 4) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1), space = "Lab", name = "Correlação") +
+  theme_minimal() +
+  labs(title = "Heatmap de Correlação entre Novas Features e Depression_Score")
