@@ -168,7 +168,6 @@ model <- cla_dtree("Depression_Score", slevels)
 model <- fit(model, dados_train)
 ```
 
-
 Previsão no conjunto de treino
 
 ```{r}
@@ -180,7 +179,12 @@ Avaliação do modelo no conjunto de treino
 ```{r}
 dados_train_predictand <- adjust_class_label(dados_train[,"Depression_Score"])
 train_eval <- evaluate(model, dados_train_predictand, train_prediction)
+print(train_eval$metrics)
 ```
+
+
+
+
 
 
 
