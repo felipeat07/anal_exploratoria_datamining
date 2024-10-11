@@ -1,8 +1,10 @@
+# Carregar bibliotecas necessárias
 library(rpart)
 library(rpart.plot)
 library(caret)
 library(dplyr)
 library(ggplot2)
+library(reshape2)
 
 # Carregar o arquivo CSV (substitua pelo caminho correto do arquivo)
 dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
@@ -10,13 +12,13 @@ dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
 # Remover linhas com valores ausentes
 dados <- na.omit(dados)
 
+str(dados)
+summary(dados)
+
+
 # Transformar variáveis categóricas em fatores
 dados <- dados %>%
   mutate_if(is.character, as.factor)
-
-# Verificar quais variáveis são numéricas e quais são categóricas
-str(dados)
-
 
 # Contagem de amostras em cada classe de Depression_Score
 table(dados$Depression_Score)
@@ -47,55 +49,47 @@ ggplot(dados_balanceados, aes(x = as.factor(Depression_Score), fill = as.factor(
        x = "Depression Score", y = "Contagem") +
   theme_minimal()
 
-
-
-
-
-
-
-
-
-
-library(ggplot2)
-library(dplyr)
-library(caret)
-library(reshape2)
-
 # Criar novas features com combinações diferentes
 dados <- dados %>%
   mutate(
     Stress_Anxiety = Stress_Level * Anxiety_Score,  # Multiplicação de estresse e ansiedade
     Stress_Sleep = Stress_Level + as.numeric(Sleep_Quality),  # Soma do estresse e qualidade do sono
     Physical_Support = as.numeric(Physical_Activity) + as.numeric(Social_Support),  # Soma de atividade física e suporte social
-    Diet_Quality_Support = as.numeric(Diet_Quality) * as.numeric(Social_Support),  # Multiplicação de qualidade da dieta e suporte social
-    CGPA_Depression = CGPA * (5 - as.numeric(Depression_Score))  # Produto do CGPA e inverso do escore de depressão
+    Diet_Quality_Support = as.numeric(Diet_Quality) * as.numeric(Social_Support)  # Multiplicação de qualidade da dieta e suporte social
   )
 
 # Normalizar as novas variáveis para que fiquem na mesma escala
 dados_normalizados <- dados %>%
-  mutate_at(vars(Stress_Anxiety, Stress_Sleep, Physical_Support, Diet_Quality_Support, CGPA_Depression), scale)
+  mutate_at(vars(Stress_Anxiety, Stress_Sleep, Physical_Support, Diet_Quality_Support), scale)
 
-# Verificar as primeiras linhas com as novas features normalizadas
-head(dados_normalizados)
+# Dividir os dados em conjunto de treino e teste
+set.seed(123)  # Para reprodutibilidade
+train_index <- createDataPartition(dados_normalizados$Depression_Score, p = 0.7, list = FALSE)
+train_data <- dados_normalizados[train_index, ]
+test_data <- dados_normalizados[-train_index, ]
 
-# Selecionar apenas as colunas relevantes para a correlação
-dados_selecionados <- dados_normalizados %>%
-  select(Depression_Score, Stress_Anxiety, Stress_Sleep, Physical_Support, Diet_Quality_Support, CGPA_Depression)
+# Treinar o modelo de árvore de decisão sem CGPA_Depression
+modelo_arvore <- rpart(Depression_Score ~ Stress_Anxiety + Stress_Sleep + Physical_Support + Diet_Quality_Support,
+                       data = train_data, method = "class")
 
-# Transformar Depression_Score em numérico para calcular a correlação
-dados_selecionados$Depression_Score <- as.numeric(as.character(dados_selecionados$Depression_Score))
+# Plotar a árvore de decisão
+rpart.plot(modelo_arvore, type = 3, extra = 102, fallen.leaves = TRUE, 
+           main = "Árvore de Decisão para Prever Depression Score", 
+           box.palette = "RdBu", shadow.col = "gray", branch.lty = 3)
 
-# Calcular a correlação entre as novas variáveis e Depression_Score
-correlacoes <- cor(dados_selecionados, use = "complete.obs")
+# Fazer previsões no conjunto de teste
+predicoes <- predict(modelo_arvore, newdata = test_data, type = "class")
 
-# Exibir a matriz de correlação
-print(correlacoes)
+# Criar a matriz de confusão
+matriz_confusao <- confusionMatrix(predicoes, test_data$Depression_Score)
 
-# Plotar um heatmap para visualizar a correlação
-cor_data <- melt(correlacoes)
-ggplot(cor_data, aes(x = Var1, y = Var2, fill = value)) +
-  geom_tile() +
-  geom_text(aes(label = round(value, 2)), color = "white", size = 4) +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1), space = "Lab", name = "Correlação") +
-  theme_minimal() +
-  labs(title = "Heatmap de Correlação entre Novas Features e Depression_Score")
+# Exibir a matriz de confusão
+print(matriz_confusao)
+
+
+
+
+
+
+
+
