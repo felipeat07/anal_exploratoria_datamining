@@ -1,9 +1,9 @@
-
 # Carregar os pacotes
 library(rpart)
 library(rpart.plot)
 library(dplyr)
 library(ggplot2)
+library(caret)  # Para obter estatísticas do modelo
 
 # Carregar o arquivo CSV (substitua o caminho do arquivo pelo correto se necessário)
 dados <- read.csv("students_mental_health_survey.csv", na.strings = "")
@@ -50,21 +50,17 @@ modelo_arvore_treino <- rpart(Depression_Score ~ ., data = dados_treino, method 
 # Visualizar a árvore de decisão treinada com o conjunto de TREINAMENTO
 rpart.plot(modelo_arvore_treino, type = 2, extra = 104, cex = 0.8, main = "Árvore de Decisão - Conjunto de Treinamento")
 
-# Treinar o modelo de árvore de decisão para prever 'Depression_Score' (sem Diet_Quality) no conjunto de teste
-modelo_arvore_teste <- rpart(Depression_Score ~ ., data = dados_teste, method = "class")
-
-# Visualizar a árvore de decisão treinada com o conjunto de TESTE
-rpart.plot(modelo_arvore_teste, type = 2, extra = 104, cex = 0.8, main = "Árvore de Decisão - Conjunto de Teste")
-
 # Fazer previsões no conjunto de teste com o modelo treinado no conjunto de TREINAMENTO
 previsoes <- predict(modelo_arvore_treino, newdata = dados_teste, type = "class")
 
 # Gerar a matriz de confusão com base nas previsões do conjunto de teste
-conf_matrix <- table(dados_teste$Depression_Score, previsoes)
-print("Matriz de Confusão:")
-print(conf_matrix)
+conf_matrix <- confusionMatrix(as.factor(previsoes), as.factor(dados_teste$Depression_Score))
 
-# Calcular a acurácia
-acuracia <- sum(diag(conf_matrix)) / sum(conf_matrix)
-print(paste("Acurácia: ", round(acuracia * 100, 2), "%"))
+# Exibir a matriz de confusão e estatísticas do modelo
+print("Matriz de Confusão:")
+print(conf_matrix$table)
+
+# Acurácia e outras estatísticas
+print(paste("Acurácia: ", round(conf_matrix$overall['Accuracy'] * 100, 2), "%"))
+print(conf_matrix$byClass)  # Estatísticas por classe
 
